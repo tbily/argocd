@@ -21,7 +21,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: nginx
+  name: app1-nginx
 spec:
   selector:
     app: nginx
@@ -29,3 +29,27 @@ spec:
     - port: 80
       targetPort: 80
   type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app1
+  namespace: app1
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - app1.tomb.local
+      secretName: star-tomb-local
+  rules:
+    - host: app1.tomb.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: app1-nginx
+                port:
+                  number: 80
+
