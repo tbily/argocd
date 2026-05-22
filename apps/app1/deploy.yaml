@@ -40,7 +40,6 @@ spec:
   tls:
     - hosts:
         - app1.tomb.local
-      secretName: star-tomb-local
   rules:
     - host: app1.tomb.local
       http:

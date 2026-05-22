@@ -29,3 +29,25 @@ spec:
     - port: 80
       targetPort: 80
   type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app2
+  namespace: app1
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - app2.tomb.local
+  rules:
+    - host: app2.tomb.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: app2-nginx
+                port:
+                  number: 80
