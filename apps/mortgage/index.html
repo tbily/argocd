@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hypotéka – průběh splácení</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #171a21;
+    --line: #262b36;
+    --text: #e7eaf0;
+    --muted: #9aa3b2;
+    --accent: #4ea1ff;
+    --accent-2: #35d39a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .layout {
+    width: 100%;
+    max-width: 900px;
+    display: grid;
+    grid-template-columns: minmax(0, 560px) minmax(0, 280px);
+    gap: 20px;
+    align-items: stretch; /* side card matches the main card's height exactly */
+  }
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: minmax(0, 560px); }
+  }
+  .card {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 28px;
+  }
+  .card.side {
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  h1 { margin: 0 0 6px; font-size: 20px; font-weight: 600; }
+
+  /* ---------- setup screen (total amount, shown once) ---------- */
+  .setup { max-width: 460px; text-align: center; }
+  .setup p { margin: 0 0 22px; font-size: 14px; color: var(--muted); }
+  .setup .big-input { margin-bottom: 16px; }
+
+  /* ---------- tracking screen ---------- */
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .head .total { font-size: 13px; color: var(--muted); }
+  .head .total b { color: var(--text); font-weight: 600; }
+
+  /* The payment box is the loudest thing on the page. */
+  .pay {
+    border: 1px solid #2f4f77;
+    background: linear-gradient(180deg, rgba(78,161,255,.10), rgba(78,161,255,.02));
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 22px;
+  }
+  .pay .pay-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .big-input { display: flex; gap: 10px; align-items: stretch; }
+  .field { position: relative; flex: 1; min-width: 0; }
+  .field input {
+    width: 100%;
+    padding: 14px 46px 14px 16px;
+    font-size: 26px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.5px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: #0f1319;
+    color: var(--text);
+  }
+  .field .cur {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 15px;
+    color: var(--muted);
+    pointer-events: none;
+  }
+  .field input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .quick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+  .bar {
+    height: 14px;
+    border-radius: 999px;
+    background: #21262f;
+    overflow: hidden;
+    border: 1px solid var(--line);
+  }
+  .fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    transition: width .35s ease;
+  }
+  .amounts {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .remaining {
+    text-align: center;
+    margin-bottom: 12px;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  .remaining small { display: block; font-size: 13px; font-weight: 400; color: var(--muted); letter-spacing: 0; }
+
+  .caption {
+    margin-top: 16px;
+    padding: 12px 14px;
+    border: 1px dashed var(--line);
+    border-radius: 10px;
+    text-align: center;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .actions { display: flex; gap: 8px; margin-top: 20px; }
+
+  button {
+    padding: 11px 16px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: var(--accent);
+    color: #08111c;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  button:hover { filter: brightness(1.08); }
+  button.lg { padding: 14px 26px; font-size: 17px; border-radius: 12px; }
+  button.ghost { background: transparent; border-color: var(--line); color: var(--muted); font-weight: 500; }
+  button.chip { padding: 6px 12px; font-size: 13px; border-radius: 999px; background: rgba(78,161,255,.14); color: var(--accent); border-color: rgba(78,161,255,.3); font-weight: 500; }
+
+  .side h2 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .side h2 span { font-size: 13px; font-weight: 400; color: var(--muted); }
+  .side .sum { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+  .side ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    flex: 1;              /* fill the remaining height of the card */
+    min-height: 0;        /* let it shrink so overflow scrolls instead of growing */
+    overflow-y: auto;
+    align-content: start;
+    display: grid;
+    gap: 2px;
+  }
+  @media (max-width: 860px) {
+    /* stacked: no main card to match, so grow with content up to a sane cap */
+    .side ol { flex: 0 1 auto; max-height: 340px; }
+  }
+  .side li {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 2px;
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    border-bottom: 1px solid var(--line);
+  }
+  .side li:last-child { border-bottom: 0; }
+  .side li .idx { color: var(--muted); font-size: 12px; }
+  .side .empty { font-size: 13px; color: var(--muted); font-style: italic; }
+
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- Screen 1: asked once, then hidden until Reset -->
+<div class="card setup" id="setupScreen" hidden>
+  <h1>Nová hypotéka</h1>
+  <p>Zadej celkovou částku, kterou je potřeba splatit. Zadáváš ji jen jednou.</p>
+  <form id="setupForm" autocomplete="off">
+    <div class="big-input">
+      <div class="field">
+        <input id="total" type="text" inputmode="numeric" placeholder="4 500 000" autofocus>
+        <span class="cur">Kč</span>
+      </div>
+    </div>
+    <button type="submit" class="lg" style="width:100%">Začít splácet</button>
+  </form>
+</div>
+
+<!-- Screen 2: tracking -->
+<div class="layout" id="trackScreen" hidden>
+  <div class="card">
+    <div class="head">
+      <div>
+        <h1>Kolik zbývá doplatit</h1>
+        <div class="total">z celkových <b id="totalLabel">0 Kč</b></div>
+      </div>
+    </div>
+
+    <form class="pay" id="payForm" autocomplete="off">
+      <div class="pay-label">Nová splátka</div>
+      <div class="big-input">
+        <div class="field">
+          <input id="inc" type="text" inputmode="numeric" placeholder="18 000">
+          <span class="cur">Kč</span>
+        </div>
+        <button type="submit" class="lg">Přidat</button>
+      </div>
+      <div class="quick" id="quick"></div>
+    </form>
+
+    <div class="remaining">
+      <span id="remaining">0 Kč</span>
+      <small>zbývá k doplacení</small>
+    </div>
+
+    <div class="bar"><div class="fill" id="fill"></div></div>
+    <div class="amounts">
+      <span id="paidLabel">Zaplaceno 0 Kč</span>
+      <span id="pctLabel">0 %</span>
+    </div>
+
+    <div class="caption" id="caption"></div>
+
+    <div class="actions">
+      <button type="button" class="ghost" id="undo">Vrátit poslední</button>
+      <button type="button" class="ghost" id="reset">Reset</button>
+    </div>
+  </div>
+
+  <aside class="card side">
+    <h2>Historie splátek <span id="count">0</span></h2>
+    <div class="sum" id="sum">Zaplaceno 0 Kč</div>
+    <ol id="list"></ol>
+  </aside>
+</div>
+
+<script>
+const KEY = 'mortgage-progress-v1';
+let state = { total: 0, payments: [] };
+
+const $ = id => document.getElementById(id);
+const czk = n => new Intl.NumberFormat('cs-CZ', {
+  style: 'currency', currency: 'CZK', maximumFractionDigits: 0
+}).format(n);
+
+// "4500000" -> "4 500 000"; digits only, groups of three
+const groupDigits = digits => digits.replace(/\B(?=(\d{3})+$)/g, ' ');
+const digitsOf = str => String(str).replace(/\D/g, '');
+const numOf = str => Number(digitsOf(str) || 0);
+
+// Reformat in place while keeping the caret at the same digit position.
+function formatInput(el) {
+  const before = el.value;
+  const caret = el.selectionStart ?? before.length;
+  const digitsBeforeCaret = digitsOf(before.slice(0, caret)).length;
+
+  el.value = groupDigits(digitsOf(before));
+
+  let pos = 0, seen = 0;
+  while (pos < el.value.length && seen < digitsBeforeCaret) {
+    if (/\d/.test(el.value[pos])) seen++;
+    pos++;
+  }
+  el.setSelectionRange(pos, pos);
+}
+
+// dd. mm. yyyy — zero-padded, built by hand so the padding is guaranteed
+function payDate(p) {
+  const d = new Date(p.date);
+  const pad = n => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}. ${pad(d.getMonth() + 1)}. ${d.getFullYear()}`;
+}
+
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if (s && typeof s.total === 'number' && Array.isArray(s.payments)) {
+      state = s;
+      // migrate bare numbers from before payments carried a date
+      state.payments = state.payments.map(p =>
+        typeof p === 'number' ? { amount: p, date: null } : p);
+    }
+  } catch (e) { /* ignore corrupt storage */ }
+}
+const save = () => localStorage.setItem(KEY, JSON.stringify(state));
+
+function monthsCaption(remaining, avg) {
+  if (remaining <= 0) return 'Splaceno! 🎉';
+  if (!avg) return 'Přidej první splátku a spočítám, jak dlouho to bude trvat.';
+
+  const months = Math.ceil(remaining / avg);
+  const years = Math.floor(months / 12);
+  const rest = months % 12;
+  const when = new Date();
+  when.setMonth(when.getMonth() + months);
+
+  let dur;
+  if (years === 0) dur = `${months} ${months === 1 ? 'měsíc' : months < 5 ? 'měsíce' : 'měsíců'}`;
+  else dur = `${years} ${years === 1 ? 'rok' : years < 5 ? 'roky' : 'let'}` +
+             (rest ? ` a ${rest} ${rest === 1 ? 'měsíc' : rest < 5 ? 'měsíce' : 'měsíců'}` : '');
+
+  const date = when.toLocaleDateString('cs-CZ', { month: 'long', year: 'numeric' });
+  return `Při průměrné splátce ${czk(avg)} / měsíc zbývá ${dur} (${months} splátek) — doplaceno cca ${date}.`;
+}
+
+// One-tap repeats of the amounts already used, most recent first.
+function renderQuick() {
+  const recent = [...new Set([...state.payments].reverse().map(p => p.amount))].slice(0, 3);
+  $('quick').innerHTML = recent
+    .map(v => `<button type="button" class="chip" data-amount="${v}">+ ${czk(v)}</button>`)
+    .join('');
+}
+
+function render() {
+  const setup = state.total <= 0;
+  $('setupScreen').hidden = !setup;
+  $('trackScreen').hidden = setup;
+  if (setup) return;
+
+  const paid = state.payments.reduce((a, p) => a + p.amount, 0);
+  const remaining = Math.max(0, state.total - paid);
+  const pct = Math.min(100, (paid / state.total) * 100);
+  const avg = state.payments.length ? paid / state.payments.length : 0;
+
+  $('totalLabel').textContent = czk(state.total);
+  $('fill').style.width = pct + '%';
+  $('paidLabel').textContent = 'Zaplaceno ' + czk(paid);
+  $('pctLabel').textContent = pct.toFixed(1) + ' %';
+  $('remaining').textContent = czk(remaining);
+  $('caption').textContent = monthsCaption(remaining, avg);
+  $('count').textContent = state.payments.length;
+  $('sum').textContent = 'Zaplaceno ' + czk(paid);
+  $('list').innerHTML = state.payments.length
+    ? state.payments.map(p =>
+        `<li><span class="idx">${p.date ? payDate(p) : '—'}</span><span>${czk(p.amount)}</span></li>`).join('')
+    : '<li class="empty">Zatím žádné splátky.</li>';
+  renderQuick();
+}
+
+function addPayment(v) {
+  if (!(v > 0)) return;
+  state.payments.push({ amount: v, date: new Date().toISOString() });
+  save(); render();
+}
+
+$('total').addEventListener('input', e => formatInput(e.target));
+$('inc').addEventListener('input', e => formatInput(e.target));
+
+$('setupForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const v = numOf($('total').value);
+  if (!(v > 0)) { $('total').focus(); return; }
+  state.total = v;
+  save(); render();
+  $('inc').focus();
+});
+
+$('payForm').addEventListener('submit', e => {
+  e.preventDefault();
+  addPayment(numOf($('inc').value));
+  $('inc').value = '';
+  $('inc').focus();
+});
+
+$('quick').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-amount]');
+  if (btn) addPayment(Number(btn.dataset.amount));
+});
+
+$('undo').addEventListener('click', () => {
+  state.payments.pop(); save(); render();
+});
+
+$('reset').addEventListener('click', () => {
+  if (!confirm('Smazat celkovou částku i všechny splátky?')) return;
+  state = { total: 0, payments: [] };
+  save();
+  $('total').value = '';
+  render();
+  $('total').focus();
+});
+
+load(); render();
+</script>
+</body>
+</html>

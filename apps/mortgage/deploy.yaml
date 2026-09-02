@@ -1,0 +1,296 @@
+# Static mortgage calculator served by nginx at https://mortgage.tomb.local
+#
+# GENERATED FILE -- do not edit by hand. Edit index.html (and the templates in
+# render.sh), then run ./render.sh and commit the result.
+---
+apiVersion: v1
+data:
+  index.html: "<!DOCTYPE html>\n<html lang=\"cs\">\n<head>\n<meta charset=\"utf-8\">\n<meta
+    name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>Hypotéka
+    – průběh splácení</title>\n<style>\n  :root {\n    --bg: #0f1115;\n    --card:
+    #171a21;\n    --line: #262b36;\n    --text: #e7eaf0;\n    --muted: #9aa3b2;\n
+    \   --accent: #4ea1ff;\n    --accent-2: #35d39a;\n  }\n  * { box-sizing: border-box;
+    }\n  body {\n    margin: 0;\n    min-height: 100vh;\n    display: grid;\n    place-items:
+    center;\n    padding: 24px;\n    background: var(--bg);\n    color: var(--text);\n
+    \   font: 16px/1.5 system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif;\n
+    \ }\n  .layout {\n    width: 100%;\n    max-width: 900px;\n    display: grid;\n
+    \   grid-template-columns: minmax(0, 560px) minmax(0, 280px);\n    gap: 20px;\n
+    \   align-items: stretch; /* side card matches the main card's height exactly
+    */\n  }\n  @media (max-width: 860px) {\n    .layout { grid-template-columns: minmax(0,
+    560px); }\n  }\n  .card {\n    width: 100%;\n    background: var(--card);\n    border:
+    1px solid var(--line);\n    border-radius: 16px;\n    padding: 28px;\n  }\n  .card.side
+    {\n    padding: 22px;\n    display: flex;\n    flex-direction: column;\n    min-height:
+    0;\n  }\n  h1 { margin: 0 0 6px; font-size: 20px; font-weight: 600; }\n\n  /*
+    ---------- setup screen (total amount, shown once) ---------- */\n  .setup { max-width:
+    460px; text-align: center; }\n  .setup p { margin: 0 0 22px; font-size: 14px;
+    color: var(--muted); }\n  .setup .big-input { margin-bottom: 16px; }\n\n  /* ----------
+    tracking screen ---------- */\n  .head {\n    display: flex;\n    justify-content:
+    space-between;\n    align-items: flex-start;\n    gap: 12px;\n    margin-bottom:
+    20px;\n  }\n  .head .total { font-size: 13px; color: var(--muted); }\n  .head
+    .total b { color: var(--text); font-weight: 600; }\n\n  /* The payment box is
+    the loudest thing on the page. */\n  .pay {\n    border: 1px solid #2f4f77;\n
+    \   background: linear-gradient(180deg, rgba(78,161,255,.10), rgba(78,161,255,.02));\n
+    \   border-radius: 14px;\n    padding: 20px;\n    margin-bottom: 22px;\n  }\n
+    \ .pay .pay-label {\n    font-size: 12px;\n    text-transform: uppercase;\n    letter-spacing:
+    .08em;\n    color: var(--accent);\n    font-weight: 600;\n    margin-bottom: 12px;\n
+    \ }\n  .big-input { display: flex; gap: 10px; align-items: stretch; }\n  .field
+    { position: relative; flex: 1; min-width: 0; }\n  .field input {\n    width: 100%;\n
+    \   padding: 14px 46px 14px 16px;\n    font-size: 26px;\n    font-weight: 700;\n
+    \   font-variant-numeric: tabular-nums;\n    letter-spacing: -.5px;\n    border-radius:
+    12px;\n    border: 1px solid var(--line);\n    background: #0f1319;\n    color:
+    var(--text);\n  }\n  .field .cur {\n    position: absolute;\n    right: 14px;\n
+    \   top: 50%;\n    transform: translateY(-50%);\n    font-size: 15px;\n    color:
+    var(--muted);\n    pointer-events: none;\n  }\n  .field input:focus { outline:
+    2px solid var(--accent); outline-offset: 1px; }\n  .quick { display: flex; flex-wrap:
+    wrap; gap: 8px; margin-top: 12px; }\n\n  .bar {\n    height: 14px;\n    border-radius:
+    999px;\n    background: #21262f;\n    overflow: hidden;\n    border: 1px solid
+    var(--line);\n  }\n  .fill {\n    height: 100%;\n    width: 0%;\n    border-radius:
+    999px;\n    background: linear-gradient(90deg, var(--accent), var(--accent-2));\n
+    \   transition: width .35s ease;\n  }\n  .amounts {\n    display: flex;\n    justify-content:
+    space-between;\n    margin-top: 8px;\n    font-size: 13px;\n    color: var(--muted);\n
+    \ }\n  .remaining {\n    text-align: center;\n    margin-bottom: 12px;\n    font-size:
+    30px;\n    font-weight: 700;\n    letter-spacing: -.5px;\n    font-variant-numeric:
+    tabular-nums;\n  }\n  .remaining small { display: block; font-size: 13px; font-weight:
+    400; color: var(--muted); letter-spacing: 0; }\n\n  .caption {\n    margin-top:
+    16px;\n    padding: 12px 14px;\n    border: 1px dashed var(--line);\n    border-radius:
+    10px;\n    text-align: center;\n    font-size: 14px;\n    color: var(--muted);\n
+    \ }\n  .actions { display: flex; gap: 8px; margin-top: 20px; }\n\n  button {\n
+    \   padding: 11px 16px;\n    border-radius: 10px;\n    border: 1px solid transparent;\n
+    \   background: var(--accent);\n    color: #08111c;\n    font-size: 15px;\n    font-weight:
+    600;\n    cursor: pointer;\n    white-space: nowrap;\n  }\n  button:hover { filter:
+    brightness(1.08); }\n  button.lg { padding: 14px 26px; font-size: 17px; border-radius:
+    12px; }\n  button.ghost { background: transparent; border-color: var(--line);
+    color: var(--muted); font-weight: 500; }\n  button.chip { padding: 6px 12px; font-size:
+    13px; border-radius: 999px; background: rgba(78,161,255,.14); color: var(--accent);
+    border-color: rgba(78,161,255,.3); font-weight: 500; }\n\n  .side h2 {\n    margin:
+    0 0 4px;\n    font-size: 15px;\n    font-weight: 600;\n    display: flex;\n    justify-content:
+    space-between;\n    align-items: baseline;\n    gap: 8px;\n  }\n  .side h2 span
+    { font-size: 13px; font-weight: 400; color: var(--muted); }\n  .side .sum { font-size:
+    13px; color: var(--muted); margin-bottom: 12px; }\n  .side ol {\n    list-style:
+    none;\n    margin: 0;\n    padding: 0;\n    flex: 1;              /* fill the
+    remaining height of the card */\n    min-height: 0;        /* let it shrink so
+    overflow scrolls instead of growing */\n    overflow-y: auto;\n    align-content:
+    start;\n    display: grid;\n    gap: 2px;\n  }\n  @media (max-width: 860px) {\n
+    \   /* stacked: no main card to match, so grow with content up to a sane cap */\n
+    \   .side ol { flex: 0 1 auto; max-height: 340px; }\n  }\n  .side li {\n    display:
+    flex;\n    justify-content: space-between;\n    gap: 10px;\n    padding: 7px 2px;\n
+    \   font-size: 14px;\n    font-variant-numeric: tabular-nums;\n    border-bottom:
+    1px solid var(--line);\n  }\n  .side li:last-child { border-bottom: 0; }\n  .side
+    li .idx { color: var(--muted); font-size: 12px; }\n  .side .empty { font-size:
+    13px; color: var(--muted); font-style: italic; }\n\n  [hidden] { display: none
+    !important; }\n</style>\n</head>\n<body>\n\n<!-- Screen 1: asked once, then hidden
+    until Reset -->\n<div class=\"card setup\" id=\"setupScreen\" hidden>\n  <h1>Nová
+    hypotéka</h1>\n  <p>Zadej celkovou částku, kterou je potřeba splatit. Zadáváš
+    ji jen jednou.</p>\n  <form id=\"setupForm\" autocomplete=\"off\">\n    <div class=\"big-input\">\n
+    \     <div class=\"field\">\n        <input id=\"total\" type=\"text\" inputmode=\"numeric\"
+    placeholder=\"4 500 000\" autofocus>\n        <span class=\"cur\">Kč</span>\n
+    \     </div>\n    </div>\n    <button type=\"submit\" class=\"lg\" style=\"width:100%\">Začít
+    splácet</button>\n  </form>\n</div>\n\n<!-- Screen 2: tracking -->\n<div class=\"layout\"
+    id=\"trackScreen\" hidden>\n  <div class=\"card\">\n    <div class=\"head\">\n
+    \     <div>\n        <h1>Kolik zbývá doplatit</h1>\n        <div class=\"total\">z
+    celkových <b id=\"totalLabel\">0 Kč</b></div>\n      </div>\n    </div>\n\n    <form
+    class=\"pay\" id=\"payForm\" autocomplete=\"off\">\n      <div class=\"pay-label\">Nová
+    splátka</div>\n      <div class=\"big-input\">\n        <div class=\"field\">\n
+    \         <input id=\"inc\" type=\"text\" inputmode=\"numeric\" placeholder=\"18
+    000\">\n          <span class=\"cur\">Kč</span>\n        </div>\n        <button
+    type=\"submit\" class=\"lg\">Přidat</button>\n      </div>\n      <div class=\"quick\"
+    id=\"quick\"></div>\n    </form>\n\n    <div class=\"remaining\">\n      <span
+    id=\"remaining\">0 Kč</span>\n      <small>zbývá k doplacení</small>\n    </div>\n\n
+    \   <div class=\"bar\"><div class=\"fill\" id=\"fill\"></div></div>\n    <div
+    class=\"amounts\">\n      <span id=\"paidLabel\">Zaplaceno 0 Kč</span>\n      <span
+    id=\"pctLabel\">0 %</span>\n    </div>\n\n    <div class=\"caption\" id=\"caption\"></div>\n\n
+    \   <div class=\"actions\">\n      <button type=\"button\" class=\"ghost\" id=\"undo\">Vrátit
+    poslední</button>\n      <button type=\"button\" class=\"ghost\" id=\"reset\">Reset</button>\n
+    \   </div>\n  </div>\n\n  <aside class=\"card side\">\n    <h2>Historie splátek
+    <span id=\"count\">0</span></h2>\n    <div class=\"sum\" id=\"sum\">Zaplaceno
+    0 Kč</div>\n    <ol id=\"list\"></ol>\n  </aside>\n</div>\n\n<script>\nconst KEY
+    = 'mortgage-progress-v1';\nlet state = { total: 0, payments: [] };\n\nconst $
+    = id => document.getElementById(id);\nconst czk = n => new Intl.NumberFormat('cs-CZ',
+    {\n  style: 'currency', currency: 'CZK', maximumFractionDigits: 0\n}).format(n);\n\n//
+    \"4500000\" -> \"4 500 000\"; digits only, groups of three\nconst groupDigits
+    = digits => digits.replace(/\\B(?=(\\d{3})+$)/g, ' ');\nconst digitsOf = str =>
+    String(str).replace(/\\D/g, '');\nconst numOf = str => Number(digitsOf(str) ||
+    0);\n\n// Reformat in place while keeping the caret at the same digit position.\nfunction
+    formatInput(el) {\n  const before = el.value;\n  const caret = el.selectionStart
+    ?? before.length;\n  const digitsBeforeCaret = digitsOf(before.slice(0, caret)).length;\n\n
+    \ el.value = groupDigits(digitsOf(before));\n\n  let pos = 0, seen = 0;\n  while
+    (pos < el.value.length && seen < digitsBeforeCaret) {\n    if (/\\d/.test(el.value[pos]))
+    seen++;\n    pos++;\n  }\n  el.setSelectionRange(pos, pos);\n}\n\n// dd. mm. yyyy
+    — zero-padded, built by hand so the padding is guaranteed\nfunction payDate(p)
+    {\n  const d = new Date(p.date);\n  const pad = n => String(n).padStart(2, '0');\n
+    \ return `${pad(d.getDate())}. ${pad(d.getMonth() + 1)}. ${d.getFullYear()}`;\n}\n\nfunction
+    load() {\n  try {\n    const s = JSON.parse(localStorage.getItem(KEY));\n    if
+    (s && typeof s.total === 'number' && Array.isArray(s.payments)) {\n      state
+    = s;\n      // migrate bare numbers from before payments carried a date\n      state.payments
+    = state.payments.map(p =>\n        typeof p === 'number' ? { amount: p, date:
+    null } : p);\n    }\n  } catch (e) { /* ignore corrupt storage */ }\n}\nconst
+    save = () => localStorage.setItem(KEY, JSON.stringify(state));\n\nfunction monthsCaption(remaining,
+    avg) {\n  if (remaining <= 0) return 'Splaceno! \U0001F389';\n  if (!avg) return
+    'Přidej první splátku a spočítám, jak dlouho to bude trvat.';\n\n  const months
+    = Math.ceil(remaining / avg);\n  const years = Math.floor(months / 12);\n  const
+    rest = months % 12;\n  const when = new Date();\n  when.setMonth(when.getMonth()
+    + months);\n\n  let dur;\n  if (years === 0) dur = `${months} ${months === 1 ?
+    'měsíc' : months < 5 ? 'měsíce' : 'měsíců'}`;\n  else dur = `${years} ${years
+    === 1 ? 'rok' : years < 5 ? 'roky' : 'let'}` +\n             (rest ? ` a ${rest}
+    ${rest === 1 ? 'měsíc' : rest < 5 ? 'měsíce' : 'měsíců'}` : '');\n\n  const date
+    = when.toLocaleDateString('cs-CZ', { month: 'long', year: 'numeric' });\n  return
+    `Při průměrné splátce ${czk(avg)} / měsíc zbývá ${dur} (${months} splátek) — doplaceno
+    cca ${date}.`;\n}\n\n// One-tap repeats of the amounts already used, most recent
+    first.\nfunction renderQuick() {\n  const recent = [...new Set([...state.payments].reverse().map(p
+    => p.amount))].slice(0, 3);\n  $('quick').innerHTML = recent\n    .map(v => `<button
+    type=\"button\" class=\"chip\" data-amount=\"${v}\">+ ${czk(v)}</button>`)\n    .join('');\n}\n\nfunction
+    render() {\n  const setup = state.total <= 0;\n  $('setupScreen').hidden = !setup;\n
+    \ $('trackScreen').hidden = setup;\n  if (setup) return;\n\n  const paid = state.payments.reduce((a,
+    p) => a + p.amount, 0);\n  const remaining = Math.max(0, state.total - paid);\n
+    \ const pct = Math.min(100, (paid / state.total) * 100);\n  const avg = state.payments.length
+    ? paid / state.payments.length : 0;\n\n  $('totalLabel').textContent = czk(state.total);\n
+    \ $('fill').style.width = pct + '%';\n  $('paidLabel').textContent = 'Zaplaceno
+    ' + czk(paid);\n  $('pctLabel').textContent = pct.toFixed(1) + ' %';\n  $('remaining').textContent
+    = czk(remaining);\n  $('caption').textContent = monthsCaption(remaining, avg);\n
+    \ $('count').textContent = state.payments.length;\n  $('sum').textContent = 'Zaplaceno
+    ' + czk(paid);\n  $('list').innerHTML = state.payments.length\n    ? state.payments.map(p
+    =>\n        `<li><span class=\"idx\">${p.date ? payDate(p) : '—'}</span><span>${czk(p.amount)}</span></li>`).join('')\n
+    \   : '<li class=\"empty\">Zatím žádné splátky.</li>';\n  renderQuick();\n}\n\nfunction
+    addPayment(v) {\n  if (!(v > 0)) return;\n  state.payments.push({ amount: v, date:
+    new Date().toISOString() });\n  save(); render();\n}\n\n$('total').addEventListener('input',
+    e => formatInput(e.target));\n$('inc').addEventListener('input', e => formatInput(e.target));\n\n$('setupForm').addEventListener('submit',
+    e => {\n  e.preventDefault();\n  const v = numOf($('total').value);\n  if (!(v
+    > 0)) { $('total').focus(); return; }\n  state.total = v;\n  save(); render();\n
+    \ $('inc').focus();\n});\n\n$('payForm').addEventListener('submit', e => {\n  e.preventDefault();\n
+    \ addPayment(numOf($('inc').value));\n  $('inc').value = '';\n  $('inc').focus();\n});\n\n$('quick').addEventListener('click',
+    e => {\n  const btn = e.target.closest('button[data-amount]');\n  if (btn) addPayment(Number(btn.dataset.amount));\n});\n\n$('undo').addEventListener('click',
+    () => {\n  state.payments.pop(); save(); render();\n});\n\n$('reset').addEventListener('click',
+    () => {\n  if (!confirm('Smazat celkovou částku i všechny splátky?')) return;\n
+    \ state = { total: 0, payments: [] };\n  save();\n  $('total').value = '';\n  render();\n
+    \ $('total').focus();\n});\n\nload(); render();\n</script>\n</body>\n</html>\n"
+kind: ConfigMap
+metadata:
+  name: mortgage-content
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mortgage
+  labels:
+    app: mortgage
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mortgage
+  template:
+    metadata:
+      labels:
+        app: mortgage
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+              name: http
+          volumeMounts:
+            - name: content
+              mountPath: /usr/share/nginx/html
+              readOnly: true
+            # nginx needs these writable; the root filesystem is read-only below.
+            - name: cache
+              mountPath: /var/cache/nginx
+            - name: run
+              mountPath: /var/run
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+              add: ["NET_BIND_SERVICE"]
+          readinessProbe:
+            httpGet:
+              path: /index.html
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /index.html
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+      volumes:
+        - name: content
+          configMap:
+            name: mortgage-content
+        - name: cache
+          emptyDir: {}
+        - name: run
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mortgage
+  labels:
+    app: mortgage
+spec:
+  type: ClusterIP
+  selector:
+    app: mortgage
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+# Server certificate issued by the in-cluster tomb-local-ca ClusterIssuer.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: mortgage-tls
+spec:
+  secretName: mortgage-tls
+  dnsNames:
+    - mortgage.tomb.local
+  issuerRef:
+    name: tomb-local-ca
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-https
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mortgage
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.middlewares: mortgage-redirect-https@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - mortgage.tomb.local
+      secretName: mortgage-tls
+  rules:
+    - host: mortgage.tomb.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mortgage
+                port:
+                  name: http
